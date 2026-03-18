@@ -458,14 +458,22 @@ bool is_larger(const poll_loop_args_t* args, const procinfo_t* victim, procinfo_
         }
         if (args->prefer_regex && regexec(args->prefer_regex, cur->name, (size_t)0, NULL, 0) == 0) {
             if (args->sort_by_rss) {
-                cur->VmRSSkiB += VMRSS_PREFER;
+                long long vmrss_prefer = VMRSS_PREFER;
+                if (args->total_memory_kib > 0) {
+                    vmrss_prefer = (long long)(args->total_memory_kib * OOM_SCORE_PREFER / 1000);
+                }
+                cur->VmRSSkiB += vmrss_prefer;
             } else {
                 cur->oom_score += OOM_SCORE_PREFER;
             }
         }
         if (args->avoid_regex && regexec(args->avoid_regex, cur->name, (size_t)0, NULL, 0) == 0) {
             if (args->sort_by_rss) {
-                cur->VmRSSkiB += VMRSS_AVOID;
+                long long vmrss_avoid = VMRSS_AVOID;
+                if (args->total_memory_kib > 0) {
+                    vmrss_avoid = (long long)(args->total_memory_kib * OOM_SCORE_AVOID / 1000);
+                }
+                cur->VmRSSkiB += vmrss_avoid;
             } else {
                 cur->oom_score += OOM_SCORE_AVOID;
             }
