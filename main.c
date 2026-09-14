@@ -69,6 +69,7 @@ double min(double x, double y)
 // (2) the stack grows to maximum size before calling mlockall()
 static void startup_selftests(poll_loop_args_t* args)
 {
+    meminfo_t m = parse_meminfo();
     if (args->kernel_oom) {
         // Check if we have permission to use kernel OOM killer
         // Use a dummy dryrun arg to avoid actually triggering kernel OOM killer
@@ -81,7 +82,7 @@ static void startup_selftests(poll_loop_args_t* args)
         }
     } else {
         debug("%s: dry-running oom kill...\n", __func__);
-        procinfo_t victim = find_largest_process(args);
+        procinfo_t victim = find_largest_process(args, &m);
         kill_process(args, 0, &victim);
     }
     if (args->notify_ext) {
@@ -154,7 +155,6 @@ int main(int argc, char* argv[])
         .report_interval_ms = 1000,
         .ignore_root_user = false,
         .sort_by_rss = false,
-        .total_memory_kib = 0,
         /* omitted fields are set to zero */
     };
     int set_my_priority = 0;
@@ -414,7 +414,6 @@ int main(int argc, char* argv[])
         }
         fprintf(stderr, "Will ignore process names that match regex '%s'\n", ignore_cmds);
     }
-    args.total_memory_kib = m.MemTotalKiB;
     if (set_my_priority) {
         bool fail = 0;
         if (setpriority(PRIO_PROCESS, 0, -20) != 0) {
@@ -559,7 +558,7 @@ static void poll_loop(const poll_loop_args_t* args)
                 nanosleep(&req, NULL);
                 continue;
             }
-            procinfo_t victim = find_largest_process(args);
+            procinfo_t victim = find_largest_process(args, &m);
             /* The run time of find_largest_process is proportional to the number
              * of processes, and takes 2.5ms on my box with a running Gnome desktop (try "make bench").
              * This is long enough that the situation may have changed in the meantime,

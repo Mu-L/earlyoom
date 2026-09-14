@@ -27,11 +27,6 @@
 // Processes matching "--avoid REGEX" get OOM_SCORE_AVOID added to their oom_score
 #define OOM_SCORE_AVOID -300
 
-// Processes matching "--prefer REGEX" get VMRSS_PREFER added to their VmRSSkiB
-#define VMRSS_PREFER 3145728
-// Processes matching "--avoid REGEX" get VMRSS_AVOID added to their VmRSSkiB
-#define VMRSS_AVOID -3145728
-
 // Buffer size for UID/GID/PID string conversion
 #define UID_BUFSIZ 128
 // Buffer size for VMRSS string conversion
@@ -406,7 +401,7 @@ out_close:
 // than our current `victim`.
 // In the process, it fills the `cur` structure. It does so lazily, meaning
 // it only fills the fields it needs to make a decision.
-bool is_larger(const poll_loop_args_t* args, const procinfo_t* victim, procinfo_t* cur)
+bool is_larger(const poll_loop_args_t* args, const meminfo_t* m, const procinfo_t* victim, procinfo_t* cur)
 {
     if (cur->pid <= 2) {
         // Let's not kill init or kthreadd.
@@ -463,10 +458,7 @@ bool is_larger(const poll_loop_args_t* args, const procinfo_t* victim, procinfo_
         }
         if (args->prefer_regex && regexec(args->prefer_regex, cur->name, (size_t)0, NULL, 0) == 0) {
             if (args->sort_by_rss) {
-                long long vmrss_prefer = VMRSS_PREFER;
-                if (args->total_memory_kib > 0) {
-                    vmrss_prefer = (long long)(args->total_memory_kib * OOM_SCORE_PREFER / 1000);
-                }
+                long long vmrss_prefer = (long long)(m->MemTotalKiB * OOM_SCORE_PREFER / 1000);
                 cur->VmRSSkiB += vmrss_prefer;
             } else {
                 cur->oom_score += OOM_SCORE_PREFER;
@@ -474,10 +466,7 @@ bool is_larger(const poll_loop_args_t* args, const procinfo_t* victim, procinfo_
         }
         if (args->avoid_regex && regexec(args->avoid_regex, cur->name, (size_t)0, NULL, 0) == 0) {
             if (args->sort_by_rss) {
-                long long vmrss_avoid = VMRSS_AVOID;
-                if (args->total_memory_kib > 0) {
-                    vmrss_avoid = (long long)(args->total_memory_kib * OOM_SCORE_AVOID / 1000);
-                }
+                long long vmrss_avoid = (long long)(m->MemTotalKiB * OOM_SCORE_AVOID / 1000);
                 cur->VmRSSkiB += vmrss_avoid;
             } else {
                 cur->oom_score += OOM_SCORE_AVOID;
@@ -587,7 +576,7 @@ void debug_print_procinfo_header()
 /*
  * Find the process with the largest oom_score or rss(when flag --sort-by-rss is set).
  */
-procinfo_t find_largest_process(const poll_loop_args_t* args)
+procinfo_t find_largest_process(const poll_loop_args_t* args, const meminfo_t* m)
 {
     DIR* procdir = opendir(procdir_path);
     if (procdir == NULL) {
@@ -628,7 +617,7 @@ procinfo_t find_largest_process(const poll_loop_args_t* args)
         procinfo_t cur = empty_procinfo;
         cur.pid = (int)strtol(d->d_name, NULL, 10);
 
-        bool larger = is_larger(args, &victim, &cur);
+        bool larger = is_larger(args, m, &victim, &cur);
 
         debug_print_procinfo(&cur);
 

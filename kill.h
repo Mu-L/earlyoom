@@ -37,13 +37,11 @@ typedef struct {
     bool dryrun;
     /* Flag --kernel-oom was passed, use kernel oom killer via /proc/sysrq-trigger */
     bool kernel_oom;
-    /* Total memory in KiB, used for dynamic VMRSS calculation */
-    long long total_memory_kib;
 } poll_loop_args_t;
 
 void kill_process(const poll_loop_args_t* args, int sig, const procinfo_t* victim);
-procinfo_t find_largest_process(const poll_loop_args_t* args);
-bool is_larger(const poll_loop_args_t* args, const procinfo_t* victim, procinfo_t* cur);
+procinfo_t find_largest_process(const poll_loop_args_t* args, const meminfo_t* m);
+bool is_larger(const poll_loop_args_t* args, const meminfo_t* m, const procinfo_t* victim, procinfo_t* cur);
 int trigger_kernel_oom(const poll_loop_args_t* args);
 
 #endif

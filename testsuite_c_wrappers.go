@@ -99,14 +99,18 @@ func is_larger(args *C.poll_loop_args_t, victim mockProcProcess, cur mockProcPro
 	// adjust VmRSSkiB. Give the victim the same treatment here.
 	cVictim := victim.toProcinfo_t()
 	cNone := C.procinfo_t{}
-	C.is_larger(args, &cNone, &cVictim)
+	m := C.meminfo_t{
+		MemTotalKiB: 10485760, // assume 10 GiB RAM
+	}
+	C.is_larger(args, &m, &cNone, &cVictim)
 	cCur := cur.toProcinfo_t()
-	return bool(C.is_larger(args, &cVictim, &cCur))
+	return bool(C.is_larger(args, &m, &cVictim, &cCur))
 }
 
 func find_largest_process() {
 	var args C.poll_loop_args_t
-	C.find_largest_process(&args)
+	var m C.meminfo_t
+	C.find_largest_process(&args, &m)
 }
 
 func kill_process() {
