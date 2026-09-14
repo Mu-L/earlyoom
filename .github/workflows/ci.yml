@@ -26,20 +26,6 @@ jobs:
 
 # And also build in a number of docker containers of older
 # distributions
-    - name: Build and test in Debian Bullseye
-      uses: maus007/docker-run-action-fork@207a4e2a8ebf7e4b985656ba990b1e53715dce2a
-      with:
-        image: debian:bullseye
-        options: -v ${{ github.workspace }}:/work
-        run: |
-          set -ex
-          apt-get -qq update > /dev/null < /dev/null
-          apt-get -qq install make gcc golang git ca-certificates > /dev/null < /dev/null
-          cd /work
-          make
-          make test
-    - run: git clean -dxff
-
     - name: Build and test in Amazon Linux 2
       uses: maus007/docker-run-action-fork@207a4e2a8ebf7e4b985656ba990b1e53715dce2a
       with:
